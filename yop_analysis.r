@@ -5,8 +5,6 @@ rm(list = ls())
 library(rstan)
 library(ggplot2)
 library(gridExtra)
-#setwd("~/Documents/Articles/Estimating-Capabilities/YOP/Analysis")
-set.seed(12345)
 options(mc.cores = parallel::detectCores()) # Sets default number of cores
 rstan_options(auto_write = TRUE)
 options(warn=-1)
@@ -20,6 +18,7 @@ df <- read.csv("./yop_child_data.csv")
 
 # Prepare data for BSFA
 N <- nrow(df)                         #N = number of rows in data
+NF <- length(unique(df$partid))       #NF = number of families / sampling units
 id <- as.numeric(as.factor(df$partid))#id= unique samping unit identifier
 f <- df$child_edu_index               #f = observed functioning vector
 
@@ -34,7 +33,7 @@ K <- ncol(Xf)                         #number of colums in X matrix
 
 # Compile prepared data
 data.list <- list(N = N, 
-                  F = F, 
+                  NF = NF, 
                   K = K, 
                   id = id, 
                   f = f, 
@@ -43,8 +42,9 @@ data.list <- list(N = N,
 
 # Fit BSFA model
 sampled.model <- sampling(compiled.model, 
-                          data = data.list, 
-                          iter = 4000)
+                          data = data.list,
+                          warmup = 2500,
+                          iter = 5000)
 
 # Diagnostics
 traceplot(sampled.model, pars=c("mu_a", "beta", "gamma1", "gamma2", "sigma_a2", "sigma_v2", "rho"))

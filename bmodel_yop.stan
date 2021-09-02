@@ -1,6 +1,6 @@
 // Define data
 data {
-  int F;           // Number of families
+  int NF;           // Number of families
   int N;           // Number of rows in data
   int K;           // Number of predictors
   int id[N];       // Family identifiers
@@ -11,7 +11,7 @@ data {
 
 // Define parameters
 parameters {
-  vector[F] alpha;                // Random intercept
+  vector[NF] alpha;                // Random intercept
   real mu_a;                      // Intercept mean
   vector[K] beta;                 // Coefficients
   vector<lower = 0>[N] u;         // "Inefficiency" term
