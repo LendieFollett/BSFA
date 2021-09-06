@@ -4,7 +4,6 @@
 rm(list = ls())
 library(rstan)
 library(ggplot2)
-library(gridExtra)
 options(mc.cores = parallel::detectCores()) # Sets default number of cores
 rstan_options(auto_write = TRUE)
 options(warn=-1)
@@ -53,8 +52,8 @@ sampled.model <- sampling(compiled.BSFA.model,
 
 
 # Diagnostics
-traceplot(sampled.model, pars=c("mu_a", "beta", "gamma1", "gamma2", "sigma_a2", "sigma_v2", "rho"))
-summary(sampled.model, pars=c("mu_a", "beta", "gamma1", "gamma2", "sigma_a2", "sigma_v2", "rho"),cache=FALSE)$summary
+traceplot(sampled.model, pars=c("mu_a", "beta[1]", "beta[5]", "beta[53]","sigma_a2", "sigma_v2", "rho"))
+summary(sampled.model, pars=c("mu_a", "beta", "sigma_a2", "sigma_v2", "rho"))$summary[,c("mean", "2.5%", "50%", "97.5%", "n_eff", "Rhat")]
 
 
 # Save results
@@ -83,8 +82,8 @@ ggplot(data = coefficients) +
   xlab("Impact Estimate") +
   ylab("Density") +
    scale_fill_manual(name = "",
-                       values = c("grey90" = "grey90",
-                                "grey20"="grey20"),
+                       values = c("grey20" = "grey20",
+                                "grey90"="grey90"),
                        labels = c("female", "male")) +
   theme_bw()
 
@@ -104,8 +103,8 @@ data.treated$id <- 1:nrow(data.treated)
 data.treated$gender <- factor(data.treated$male, levels = c(0,1), labels = c("female", "male"))
 
 ggplot(data.treated) +
-  geom_errorbar(aes(x = id, ymin = f_pred_f_lb, ymax = f_pred_f_ub, colour = "grey60"), width = 0) +
-  geom_errorbar(aes(x = id, ymin = f_pred_c_lb, ymax = f_pred_c_ub, colour = "grey40"), width = 0) +
+  geom_errorbar(aes(x = id, ymin = f_pred_f_lb, ymax = f_pred_f_ub, colour = "grey40"), width = 0) +
+  geom_errorbar(aes(x = id, ymin = f_pred_c_lb, ymax = f_pred_c_ub, colour = "grey60"), width = 0) +
   #geom_line(aes(x = id, y = f_pred_c_ub)) +
   #geom_line(aes(x = id, y = f_pred_c_lb)) +
   xlab("Child") +
@@ -113,9 +112,9 @@ ggplot(data.treated) +
   facet_wrap(~gender) +
   scale_y_continuous(limits = c(-5, 5))+
   scale_colour_manual(name = "",
-                      values = c("grey60" = "grey60",
-                                 "grey40"="grey40"),
-                      labels = c("treated", "untreated")) +
+                      values = c("grey40"="grey40",
+                                 "grey60" = "grey60"),
+                      labels = c("treated","untreated")) +
   theme_bw()
 
 
