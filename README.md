@@ -13,6 +13,6 @@ Files produced after running yop_analysis.r
 - potentials.csv
 
 
-R packages required: rstan, ggplot2
+R packages required: rstan, ggplot2, dplyr
 
 R packages recommended: gridExtra

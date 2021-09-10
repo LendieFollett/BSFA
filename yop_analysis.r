@@ -2,8 +2,9 @@
 
 # Set up
 rm(list = ls())
-library(rstan)
-library(ggplot2)
+library(rstan) # for fitting bayesian model
+library(ggplot2) # for visualization
+library(dplyr) # for data manipulation
 options(mc.cores = parallel::detectCores()) # Sets default number of cores
 rstan_options(auto_write = TRUE)
 options(warn=-1)
@@ -49,7 +50,7 @@ sampled.model <- sampling(compiled.BSFA.model,
                           warmup = 2500,
                           iter = 5000)
 
-
+#sampled.model <- readRDS("sampled.model.RDS")
 
 # Diagnostics
 traceplot(sampled.model, pars=c("mu_a", "beta[1]", "beta[5]", "beta[53]","sigma_a2", "sigma_v2", "rho"))
@@ -59,18 +60,15 @@ summary(sampled.model, pars=c("mu_a", "beta", "sigma_a2", "sigma_v2", "rho"))$su
 # Save results
 
 # extract samples from sampled.model
-trtid <- which(colnames(Xf)%in% c("assigned", "male", "male_assigned"))
+trtid <- which(colnames(Xf)%in% c("assigned", "male_assigned"))
 coefficients <- data.frame(extract(sampled.model, pars = paste("beta[", trtid, "]", sep = "")))
 functioning_factual <- data.frame(extract(sampled.model, pars = c("f_pred_f")))
 functioning_counterfactual <- data.frame(extract(sampled.model, pars = c("f_pred_c")))
 
-# compute mean potentials
-potentials <- data.frame(get_posterior_mean(sampled.model, pars = c("c_f"))[, 5])
 
 # save csv files of samples
 write.csv(coefficients, "coefficients.csv")
-write.csv(potentials, "potentials.csv")
-write.csv(functioning_factual, "functioning_factual.csv")
+write.csv(functioning_factual, "functioning_factual.csv") 
 write.csv(functioning_counterfactual, "functioning_counterfactual.csv")
 
 # Plot impact estimates
@@ -86,6 +84,29 @@ ggplot(data = coefficients) +
                                 "grey90"="grey90"),
                        labels = c("female", "male")) +
   theme_bw()
+
+# posterior means
+coefficients %>% 
+  mutate(male_treatment_effect = beta.1.+beta.53.,
+         female_treatment_effect = beta.1.) %>%
+  summarise(male_prob_positive = mean(male_treatment_effect),
+            female_prob_positive=mean(female_treatment_effect))
+
+# 90% credible intervals
+coefficients %>% 
+  mutate(male_treatment_effect = beta.1.+beta.53.,
+         female_treatment_effect = beta.1.) %>%
+  summarise(male_prob_positive = quantile(male_treatment_effect, c(.05, .95)),
+            female_prob_positive=quantile(female_treatment_effect, c(.05, .95))) %>%t()
+
+# What is the probability of a positive treatment effect on capabilities?
+coefficients %>% 
+  mutate(male_treatment_effect = beta.1.+beta.53.,
+         female_treatment_effect = beta.1.) %>%
+  summarise(male_prob_positive = mean(male_treatment_effect > 0),
+            female_prob_positive=mean(female_treatment_effect > 0))
+# 94% posterior probability of a positive effect on educational capabilities for children of female beneficiaries
+
 
 # Plot all capability sets
 
@@ -116,5 +137,6 @@ ggplot(data.treated) +
                                  "grey60" = "grey60"),
                       labels = c("treated","untreated")) +
   theme_bw()
+
 
 
