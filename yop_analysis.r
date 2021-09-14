@@ -2,9 +2,11 @@
 
 # Set up
 rm(list = ls())
-library(rstan) # for fitting bayesian model
+
+library(rstan) # for fitting Bayesian model
 library(ggplot2) # for visualization
-library(dplyr) # for data manipulation
+library(dplyr) # for data summaries
+
 options(mc.cores = parallel::detectCores()) # Sets default number of cores
 rstan_options(auto_write = TRUE)
 options(warn=-1)
@@ -29,6 +31,8 @@ drop <- c("partid", "child_edu_index")
 Xf <- df[, !(names(df) %in% drop)]    #Xf= actual covariate matrix
 Xf$male_assigned <- Xf$assigned*Xf$male 
 
+View(Xf)
+
 ## Counterfactual X matrix
 Xc <- Xf                              #Xc= counterfactual covariate matrix
 Xc$assigned <- abs(Xc$assigned - 1)   #flip treatment indicator on Xc
@@ -45,25 +49,27 @@ data.list <- list(N = N,
                   Xc = Xc)
 
 # Fit BSFA model
-sampled.model <- sampling(compiled.BSFA.model, 
+sampled.BSFA.model <- sampling(compiled.BSFA.model, 
                           data = data.list,
                           warmup = 2500,
-                          iter = 5000)
+                          iter = 5000, #total number of iterations
+                          chains = 4)
 
-#sampled.model <- readRDS("sampled.model.RDS")
+
+sampled.BSFA.model <- readRDS("sampled.BSFA.model.RDS")
 
 # Diagnostics
-traceplot(sampled.model, pars=c("mu_a", "beta[1]", "beta[5]", "beta[53]","sigma_a2", "sigma_v2", "rho"))
-summary(sampled.model, pars=c("mu_a", "beta", "sigma_a2", "sigma_v2", "rho"))$summary[,c("mean", "2.5%", "50%", "97.5%", "n_eff", "Rhat")]
+traceplot(sampled.BSFA.model, pars=c("mu_a", "beta[1]", "beta[5]", "beta[53]","sigma_a2", "sigma_v2", "rho"))
+summary(sampled.BSFA.model, pars=c("mu_a", "beta", "sigma_a2", "sigma_v2", "rho"))$summary[,c("mean", "2.5%", "50%", "97.5%", "n_eff", "Rhat")]
 
 
 # Save results
 
-# extract samples from sampled.model
+# extract samples from sampled.BSFA.model
 trtid <- which(colnames(Xf)%in% c("assigned", "male_assigned"))
-coefficients <- data.frame(extract(sampled.model, pars = paste("beta[", trtid, "]", sep = "")))
-functioning_factual <- data.frame(extract(sampled.model, pars = c("f_pred_f")))
-functioning_counterfactual <- data.frame(extract(sampled.model, pars = c("f_pred_c")))
+coefficients <- data.frame(extract(sampled.BSFA.model, pars = paste("beta[", trtid, "]", sep = "")))
+functioning_factual <- data.frame(extract(sampled.BSFA.model, pars = c("f_pred_f")))
+functioning_counterfactual <- data.frame(extract(sampled.BSFA.model, pars = c("f_pred_c")))
 
 
 # save csv files of samples
@@ -126,8 +132,6 @@ data.treated$gender <- factor(data.treated$male, levels = c(0,1), labels = c("fe
 ggplot(data.treated) +
   geom_errorbar(aes(x = id, ymin = f_pred_f_lb, ymax = f_pred_f_ub, colour = "grey40"), width = 0) +
   geom_errorbar(aes(x = id, ymin = f_pred_c_lb, ymax = f_pred_c_ub, colour = "grey60"), width = 0) +
-  #geom_line(aes(x = id, y = f_pred_c_ub)) +
-  #geom_line(aes(x = id, y = f_pred_c_lb)) +
   xlab("Child") +
   ylab("Education Level") +
   facet_wrap(~gender) +
@@ -137,6 +141,5 @@ ggplot(data.treated) +
                                  "grey60" = "grey60"),
                       labels = c("treated","untreated")) +
   theme_bw()
-
 
 
